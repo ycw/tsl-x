@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "description": "",
   "type": "module",
+  "main": "./src/index.js",
   "exports": {
     ".": "./src/index.js"
   },
