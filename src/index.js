@@ -1,3 +1,4 @@
-export * from './color_ramp.js'
+export * from './color.js'
 export * from './hash.js'
-export * from './mirrored_repeat.js'
+export * from './texture.js'
+export * from './normal.js'
