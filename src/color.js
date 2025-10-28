@@ -1,50 +1,116 @@
-import { TSL } from 'three/webgpu'
-
-const { Fn, If, Loop, array, uint, Break, mix } = TSL
-
-let dispatched_count = 0
+// import * as THREE from 'three/webgpu'
+import { TSL as $ } from 'three/webgpu'
 
 /**
- * Each `color_ramp` dispatches a standalone wgsl fn, so *reuse* if possible
- * @todo generic-ify after solving '.setLayout w/ arr inputs (wgsl backend)'
+ * Linearly interpolates between a series of color stops and returns
+ * the sampled color at a given position.
+ *
+ * Stops are sorted by their position (0–1) before interpolation.
+ * Each stop is a tuple `[pos, color]`.
+ *
  * @example
  * ```js
- * const ramp = color_ramp([
- *  [float(0.0), color('red')],
- *  [float(0.3), color('lime')],
- *  [float(0.6), color('blue')],
- * ], 'constant')
- * material.colorNode = ramp(mx_noise_float(..))
+ * // Ramp from red -> lime -> animated blue
+ * mat.colorNode = color_ramp_linear([
+ *   [0.1, 'red'],
+ *   [0.7, 'lime'],
+ *   [0.9, color(0, 0, time.sin().remap(-1, 1, 0, 1))]
+ * ], uv().x)
  * ```
- * @param {Array} colorstops `[offset,color][]`
- * @param {'constant'|'linear'} [mode='linear'] Gradient mode
- * @returns A js fn accepting 'fac', returning interpolated color
+ *
+ * @param {*} stops - Array of color stops `[position, color]`
+ * @param {*} fac - The sample coordinate (e.g. `uv().x`)
+ * @returns {*} Interpolated color node
  */
-export const color_ramp = (colorstops, mode = 'linear') => {
-  return Fn(([fac]) => {
-    const SIZE = colorstops.length
-    const offsets = array(colorstops.map((x) => x[0])).toConst('offsets')
-    const colors = array(colorstops.map((x) => x[1])).toConst('colors')
-    const i_end = uint(SIZE).toVar('i_end')
-    Loop(SIZE, ({ i }) => {
-      If(fac.lessThanEqual(offsets.element(i)), () => {
-        i_end.assign(i)
-        Break()
-      })
-    })
-    If(i_end.equal(0), () => colors.element(0))
-    If(i_end.equal(SIZE), () => colors.element(SIZE - 1))
-    const i_start = i_end.sub(1).toConst('i_start')
-    const u_mode = uint({ linear: 0, constant: 1 }[mode])
-    If(u_mode.equal(1), () => colors.element(i_start))
-    return mix(
-      colors.element(i_start),
-      colors.element(i_end),
-      fac.remap(offsets.element(i_start), offsets.element(i_end))
-    )
-  }).setLayout({
-    type: 'color',
-    name: `YCW_color_ramp_${dispatched_count++}`,
-    inputs: [{ name: 'fac', type: 'float' }]
-  })
+export const color_ramp_linear = (stops, fac) => {
+  const sorted_stops = stops.toSorted((a, b) => a[0] - b[0])
+  const positions = sorted_stops.map((x) => $.float(x[0]))
+  const colors = sorted_stops.map((x) => $.color(x[1]))
+  let color = colors[0]
+  for (let i = 0; i < stops.length - 1; ++i) {
+    const p0 = positions[i]
+    const p1 = positions[i + 1]
+    const color1 = colors[i + 1]
+    const t = $.float(fac).sub(p0).div(p1.sub(p0)).clamp(0, 1)
+    color = $.mix(color, color1, t)
+  }
+  return color
 }
+
+/**
+ * Samples a step-wise (step-start) color ramp defined by stops.
+ *
+ * Stops are sorted by their position (0–1) before evaluation.
+ *
+ * @example
+ * ```js
+ * mat.colorNode = color_ramp_step_start([
+ *   [0.0, 'red'],
+ *   [0.5, 'lime'],
+ * ], uv().x)
+ * ```
+ *
+ * @param {*} stops - Array of color stops `[position, color]`
+ * @param {*} fac - The sample coordinate (e.g. `uv().x`)
+ * @returns {*} The selected color node
+ */
+export const color_ramp_step_start = (stops, fac) => {
+  const sorted_stops = stops.toSorted((a, b) => a[0] - b[0])
+  const positions = sorted_stops.map((x) => $.float(x[0]))
+  const colors = sorted_stops.map((x) => $.color(x[1]))
+  let color = colors[0]
+  for (let i = 0; i < stops.length - 1; ++i) {
+    const p0 = positions[i]
+    const p1 = positions[i + 1]
+    const color1 = colors[i + 1]
+    const t = $.float(fac).sub(p0).div(p1.sub(p0))
+    color = $.select(t.lessThan(1), color, color1)
+  }
+  return color
+}
+
+/**
+ * Samples a step-wise (step-end) color ramp defined by stops.
+ *
+ * Stops are sorted by their position (0–1) before evaluation.
+ *
+ * @example
+ * ```js
+ * mat.colorNode = color_ramp_step_end([
+ *   [0.5, 'lime'],
+ *   [1.0, 'blue']
+ * ], uv().x)
+ * ```
+ *
+ * @param {*} stops - Array of color stops `[position, color]`
+ * @param {*} fac - The sample coordinate (e.g. `uv().x`)
+ * @returns {*} The selected color node
+ */
+export const color_ramp_step_end = (stops, fac) => {
+  const sorted_stops = stops.toSorted((a, b) => a[0] - b[0])
+  const positions = sorted_stops.map((x) => $.float(x[0]))
+  const colors = sorted_stops.map((x) => $.color(x[1]))
+  let color = colors[0]
+  for (let i = 0; i < stops.length - 1; ++i) {
+    const p0 = positions[i]
+    const p1 = positions[i + 1]
+    const color1 = colors[i + 1]
+    const t = $.float(fac).sub(p0).div(p1.sub(p0))
+    color = $.select(t.greaterThan(0), color1, color)
+  }
+  return color
+}
+
+// @TODO: maybe
+// export const color_ramp_linear_baked = (stops, renderer, size = 128) => {
+//   const texture = new THREE.StorageTexture(size, 1)
+//   if (stops.length === 0) return texture
+//   const compute_node = $.Fn(() => {
+//     const index = $.float($.globalId.x)
+//     const fac = index.div(size - 1)
+//     const color = color_ramp_linear(stops, fac)
+//     $.textureStore(texture, $.uvec2(index, 0), $.vec4(color, 1))
+//   })().compute(size, [256, 1, 1])
+//   renderer.compute(compute_node)
+//   return texture
+// }
