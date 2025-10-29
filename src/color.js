@@ -23,15 +23,17 @@ import { TSL as $ } from 'three/webgpu'
  * @returns {*} Interpolated color node
  */
 export const color_ramp_linear = (stops, fac) => {
-  const sorted_stops = stops.toSorted((a, b) => a[0] - b[0])
-  const positions = sorted_stops.map((x) => $.float(x[0]))
-  const colors = sorted_stops.map((x) => $.color(x[1]))
+  fac = $.float(fac)
+  stops = stops.map((x) => [$.float(x[0]), $.color(x[1])])
+  const sorted_stops = stops.toSorted((a, b) => a[0].value - b[0].value)
+  const positions = sorted_stops.map((x) => x[0])
+  const colors = sorted_stops.map((x) => x[1])
   let color = colors[0]
   for (let i = 0; i < stops.length - 1; ++i) {
     const p0 = positions[i]
     const p1 = positions[i + 1]
     const color1 = colors[i + 1]
-    const t = $.float(fac).sub(p0).div(p1.sub(p0)).clamp(0, 1)
+    const t = fac.sub(p0).div(p1.sub(p0)).clamp(0, 1)
     color = $.mix(color, color1, t)
   }
   return color
@@ -55,15 +57,17 @@ export const color_ramp_linear = (stops, fac) => {
  * @returns {*} The selected color node
  */
 export const color_ramp_step_start = (stops, fac) => {
-  const sorted_stops = stops.toSorted((a, b) => a[0] - b[0])
-  const positions = sorted_stops.map((x) => $.float(x[0]))
-  const colors = sorted_stops.map((x) => $.color(x[1]))
+  fac = $.float(fac)
+  stops = stops.map((x) => [$.float(x[0]), $.color(x[1])])
+  const sorted_stops = stops.toSorted((a, b) => a[0].value - b[0].value)
+  const positions = sorted_stops.map((x) => x[0])
+  const colors = sorted_stops.map((x) => x[1])
   let color = colors[0]
   for (let i = 0; i < stops.length - 1; ++i) {
     const p0 = positions[i]
     const p1 = positions[i + 1]
     const color1 = colors[i + 1]
-    const t = $.float(fac).sub(p0).div(p1.sub(p0))
+    const t = fac.sub(p0).div(p1.sub(p0))
     color = $.select(t.lessThan(1), color, color1)
   }
   return color
@@ -87,15 +91,17 @@ export const color_ramp_step_start = (stops, fac) => {
  * @returns {*} The selected color node
  */
 export const color_ramp_step_end = (stops, fac) => {
-  const sorted_stops = stops.toSorted((a, b) => a[0] - b[0])
-  const positions = sorted_stops.map((x) => $.float(x[0]))
-  const colors = sorted_stops.map((x) => $.color(x[1]))
+  fac = $.float(fac)
+  stops = stops.map((x) => [$.float(x[0]), $.color(x[1])])
+  const sorted_stops = stops.toSorted((a, b) => a[0].value - b[0].value)
+  const positions = sorted_stops.map((x) => x[0])
+  const colors = sorted_stops.map((x) => x[1])
   let color = colors[0]
   for (let i = 0; i < stops.length - 1; ++i) {
     const p0 = positions[i]
     const p1 = positions[i + 1]
     const color1 = colors[i + 1]
-    const t = $.float(fac).sub(p0).div(p1.sub(p0))
+    const t = fac.sub(p0).div(p1.sub(p0))
     color = $.select(t.greaterThan(0), color1, color)
   }
   return color
