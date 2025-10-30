@@ -11,19 +11,31 @@ import { TSL as $ } from 'three/webgpu'
  * ```js
  * const f = (xy) => mx_noise_float(xy)
  * const k = uv()
+ *
+ * // Geometry unchanged; only normals are perturbed
+ * mat.positionNode = positionLocal
+ * mat.normalNode   = bump(f, k, strength)
+ *
+ * // Geometry displaced by height; bump strength affects only normals
  * mat.positionNode = positionLocal.add(normalLocal.mul(f(k)))
- * mat.normalNode = bump(f, k)
+ * mat.normalNode   = bump(f, k, strength)
+ *
+ * // Geometry displacement also scaled by strength for consistency
+ * mat.positionNode = positionLocal.add(normalLocal.mul(f(k).mul(strength)))
+ * mat.normalNode   = bump(f, k, strength)
  * ```
  *
  * @param {*} f - Scalar field function that takes a vec2 (e.g. UV) and returns a float value (height).
  * @param {*} k - The 2D coordinate at which to evaluate the bump gradient.
+ * @param {*} [strength=1.0] - Multiplier for gradient magnitude (controls bump strength).
  * @param {*} [eps=0.001] - Small offset step used for finite difference approximation.
  * @returns {*} View-space perturbed normal vector suitable for shading.
  */
-export const bump = (f, k, eps = 0.001) => {
+export const bump = (f, k, strength = 1.0, eps = 0.001) => {
   k = $.vec2(k)
+  strength = $.float(strength)
   eps = $.float(eps)
-  return $.transformNormalToView(bump_localspace(f, k, eps))
+  return $.transformNormalToView(bump_localspace(f, k, strength, eps))
 }
 
 /**
@@ -35,13 +47,15 @@ export const bump = (f, k, eps = 0.001) => {
  *
  * @param {*} f - Scalar field function that takes a vec2 (e.g. UV) and returns a float value (height).
  * @param {*} k - The 2D coordinate at which to evaluate the bump gradient.
+ * @param {*} [strength=1.0] - Multiplier for gradient magnitude (controls bump strength).
  * @param {*} [eps=0.001] - Small offset step used for finite difference approximation.
  * @returns {*} Local-space perturbed normal vector, adjusted by face orientation.
  */
-export const bump_localspace = (f, k, eps = 0.001) => {
+export const bump_localspace = (f, k, strength = 1.0, eps = 0.001) => {
   k = $.vec2(k)
+  strength = $.float(strength)
   eps = $.float(eps)
-  const df = forward_difference_gradient(f, k, eps)
+  const df = forward_difference_gradient(f, k, eps).mul(strength)
   const dpds = $.tangentLocal.add($.normalLocal.mul(df.s))
   const dpdt = $.bitangentLocal.add($.normalLocal.mul(df.t))
   const localspace_normal = dpds.cross(dpdt).normalize()
