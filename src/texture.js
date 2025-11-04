@@ -18,12 +18,12 @@ export const mirrored_repeat = (coordinate) => {
  * Convert 2D Cartesian coordinates to 2D polar coordinates.
  *
  * @param {*} coordinate - Input Vec2 (x, y) in Cartesian space.
- * @param {*} [origin=(0.5, 0.5)] - Origin of the polar system.
+ * @param {*} [origin=(0, 0)] - Origin of the polar system.
  * @returns {*} Vec2 (r, theta)
  *   - r: radius, distance from origin
  *   - theta: angle in radians, measured counter‑clockwise from the +x axis, range [-PI, PI]
  */
-export const cartesian2d_to_polar2d = $.Fn(([coordinate, origin = $.vec2(0.5, 0.5)]) => {
+export const cartesian2d_to_polar2d = $.Fn(([coordinate, origin = $.vec2(0, 0)]) => {
   coordinate = $.vec2(coordinate)
   origin = $.vec2(origin)
   const offset = coordinate.sub(origin)
@@ -38,10 +38,10 @@ export const cartesian2d_to_polar2d = $.Fn(([coordinate, origin = $.vec2(0.5, 0.
  * @param {*} coordinate - Input Vec2 (r, theta) in polar space.
  *   - r: radius, distance from origin
  *   - theta: angle in radians, measured counter‑clockwise from the +x axis, range [-PI, PI]
- * @param {*} [origin=(0.5, 0.5)] - Origin of the Cartesian system.
+ * @param {*} [origin=(0, 0)] - Origin of the Cartesian system.
  * @returns {*} Vec2 (x, y) in Cartesian space
  */
-export const polar2d_to_cartesian2d = $.Fn(([coordinate, origin = $.vec2(0.5, 0.5)]) => {
+export const polar2d_to_cartesian2d = $.Fn(([coordinate, origin = $.vec2(0, 0)]) => {
   coordinate = $.vec2(coordinate)
   origin = $.vec2(origin)
   const r = coordinate.x
@@ -55,12 +55,12 @@ export const polar2d_to_cartesian2d = $.Fn(([coordinate, origin = $.vec2(0.5, 0.
  * Convert 2D Cartesian coordinates to polar coordinates with normalized angle.
  *
  * @param {*} coordinate - Input Vec2 (x, y) in Cartesian space.
- * @param {*} [origin=(0.5, 0.5)] - Origin of the polar system.
+ * @param {*} [origin=(0, 0)] - Origin of the polar system.
  * @returns {*} Vec2 (r, theta01)
  *   - r: radius, distance from origin
  *   - theta01: normalized angle, range 0 to 1 corresponds to -PI to +PI
  */
-export const cartesian2d_to_polar2d01 = $.Fn(([coordinate, origin = $.vec2(0.5, 0.5)]) => {
+export const cartesian2d_to_polar2d01 = $.Fn(([coordinate, origin = $.vec2(0, 0)]) => {
   coordinate = $.vec2(coordinate)
   origin = $.vec2(origin)
   const polar2d = cartesian2d_to_polar2d(coordinate, origin)
@@ -75,10 +75,10 @@ export const cartesian2d_to_polar2d01 = $.Fn(([coordinate, origin = $.vec2(0.5, 
  * @param {*} coordinate - Input Vec2 (r, theta01) in normalized polar space.
  *   - r: radius, distance from origin
  *   - theta01: normalized angle, range 0 to 1 corresponds to -PI to +PI
- * @param {*} [origin=(0.5, 0.5)] - Origin of the Cartesian system.
+ * @param {*} [origin=(0, 0)] - Origin of the Cartesian system.
  * @returns {*} Vec2 (x, y) in Cartesian space
  */
-export const polar2d01_to_cartesian2d = $.Fn(([coordinate, origin = $.vec2(0.5, 0.5)]) => {
+export const polar2d01_to_cartesian2d = $.Fn(([coordinate, origin = $.vec2(0, 0)]) => {
   coordinate = $.vec2(coordinate)
   origin = $.vec2(origin)
   const r = coordinate.x
@@ -95,13 +95,13 @@ export const polar2d01_to_cartesian2d = $.Fn(([coordinate, origin = $.vec2(0.5, 
  * Convert 3D Cartesian coordinates to 3D spherical coordinates.
  *
  * @param {*} coordinate - Input Vec3 in Cartesian space (x, y, z).
- * @param {*} [origin=(0.5,0.5,0.5)] - Origin of the spherical system.
+ * @param {*} [origin=(0,0,0)] - Origin of the spherical system.
  * @returns {*} Vec3 (r, azimuth, inclination)
  *   - r: radius, distance from origin
  *   - azimuth: angle in xz-plane from +z toward +x, range [-PI, PI]
  *   - inclination: angle down from +y axis, range [0, PI]
  */
-export const cartesian3d_to_spherical3d = $.Fn(([coordinate, origin = $.vec3(0.5, 0.5, 0.5)]) => {
+export const cartesian3d_to_spherical3d = $.Fn(([coordinate, origin = $.vec3(0, 0, 0)]) => {
   coordinate = $.vec3(coordinate)
   origin = $.vec3(origin)
   const offset = coordinate.sub(origin)
@@ -118,10 +118,10 @@ export const cartesian3d_to_spherical3d = $.Fn(([coordinate, origin = $.vec3(0.5
  *   - r: radius, distance from origin
  *   - azimuth: angle in xz-plane from +z toward +x, range [-PI, PI]
  *   - inclination: angle down from +y axis, range [0, PI]
- * @param {*} [origin=(0.5,0.5,0.5)] - Origin of the Cartesian system
+ * @param {*} [origin=(0,0,0)] - Origin of the Cartesian system
  * @returns {*} Vec3 (x, y, z) in Cartesian space
  */
-export const spherical3d_to_cartesian3d = $.Fn(([coordinate, origin = $.vec3(0.5, 0.5, 0.5)]) => {
+export const spherical3d_to_cartesian3d = $.Fn(([coordinate, origin = $.vec3(0, 0, 0)]) => {
   coordinate = $.vec3(coordinate)
   origin = $.vec3(origin)
   const r = coordinate.x
@@ -137,13 +137,13 @@ export const spherical3d_to_cartesian3d = $.Fn(([coordinate, origin = $.vec3(0.5
  * Convert 3D Cartesian to 3D spherical coordinates with normalized angles.
  *
  * @param {*} coordinate - Input Vec3 in Cartesian space (x, y, z).
- * @param {*} [origin=(0.5,0.5,0.5)] - Origin of the spherical system.
+ * @param {*} [origin=(0,0,0)] - Origin of the spherical system.
  * @returns {*} Vec3 (r, azimuth01, inclination01)
  *   - r: radius
  *   - azimuth01: normalized azimuth, [0,1] maps to [-PI, PI]
  *   - inclination01: normalized inclination, [0,1] maps to [0, PI]
  */
-export const cartesian3d_to_spherical3d01 = $.Fn(([coordinate, origin = $.vec3(0.5, 0.5, 0.5)]) => {
+export const cartesian3d_to_spherical3d01 = $.Fn(([coordinate, origin = $.vec3(0, 0, 0)]) => {
   coordinate = $.vec3(coordinate)
   origin = $.vec3(origin)
   const spherical_coordinate = cartesian3d_to_spherical3d(coordinate, origin)
@@ -160,10 +160,10 @@ export const cartesian3d_to_spherical3d01 = $.Fn(([coordinate, origin = $.vec3(0
  *   - r: radius, distance from origin
  *   - azimuth01: normalized azimuth, [0,1] maps to [-PI, PI]
  *   - inclination01: normalized inclination, [0,1] maps to [0, PI]
- * @param {*} [origin=(0.5,0.5,0.5)] - Origin of the Cartesian system
+ * @param {*} [origin=(0,0,0)] - Origin of the Cartesian system
  * @returns {*} Vec3 (x, y, z) in Cartesian space
  */
-export const spherical3d01_to_cartesian3d = $.Fn(([coordinate, origin = $.vec3(0.5, 0.5, 0.5)]) => {
+export const spherical3d01_to_cartesian3d = $.Fn(([coordinate, origin = $.vec3(0, 0, 0)]) => {
   coordinate = $.vec3(coordinate)
   origin = $.vec3(origin)
   const r = coordinate.x
