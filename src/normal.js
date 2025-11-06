@@ -138,7 +138,7 @@ export const bump_field3d_localspace = (f, k, strength = 1.0, eps = 0.001) => {
   strength = $.float(strength)
   eps = $.float(eps)
   const n = $.normalLocal.normalize()
-  const grad3 = finite_difference_gradient3d(f, k, eps)
+  const grad3 = forward_difference_gradient3d(f, k, eps)
   const grad_tangent = grad3.sub(n.mul(grad3.dot(n)))
   const localspace_normal = n.sub(grad_tangent.mul(strength))
   return localspace_normal.normalize()
@@ -155,7 +155,7 @@ export const bump_field3d_localspace = (f, k, strength = 1.0, eps = 0.001) => {
  * @param {*} [eps=0.001] - Small offset step used for finite difference approximation.
  * @returns {*} Gradient vector of the scalar field at the sample point.
  */
-export const finite_difference_gradient3d = (f, k, eps = 0.001) => {
+export const forward_difference_gradient3d = (f, k, eps = 0.001) => {
   k = $.vec3(k)
   eps = $.float(eps)
   const h = f(k)
