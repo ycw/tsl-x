@@ -20,18 +20,18 @@ import { TSL as $ } from 'three/webgpu'
  * noise_texture.type = THREE.HalfFloatType
  * bake_texture2d(renderer, noise_texture, (uv) => {
  *   uv = uv.mul(4).fract()
- *   return $.mx_noise_float(uv)
+ *   return mx_noise_float(uv)
  * })
  * ```
  */
 export const bake_texture2d = (renderer, target_texture, value_fn) => {
-  const texture_size = $.vec2(target_texture.width - 1, target_texture.height - 1)
+  const texture_bounds = $.vec2(target_texture.width - 1, target_texture.height - 1)
   const kernel = $.Fn(() => {
     const index2d = $.vec2(
       $.instanceIndex.mod(target_texture.width), 
       $.instanceIndex.div(target_texture.width)
     )
-    const uv01 = index2d.div(texture_size.max(1))
+    const uv01 = index2d.div(texture_bounds.max(1))
     const value = value_fn(uv01)
     $.textureStore(target_texture, $.uvec2(index2d), value)
   })().compute(target_texture.width * target_texture.height)
