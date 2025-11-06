@@ -1,5 +1,5 @@
 export * from './color.js'
 export * from './hash.js'
-export * from './texture.js'
+export * from './map.js'
 export * from './normal.js'
 export * from './bake.js'
