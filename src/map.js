@@ -3,12 +3,38 @@ import { TSL as $ } from 'three/webgpu'
 /**
  * Apply mirrored repeat, mapping input into [0,1] with symmetry.
  *
- * @param {*} coordinate - Float or Vec2/Vec3/Vec4
+ * @param {*} coordinate - `float` or `vec[234]`
  * @returns {*} Same type as input, mirrored into [0,1]
  */
-export const mirrored_repeat = (coordinate) => {
+export const mirrored_repeat = $.Fn(([coordinate]) => {
   return coordinate.mod(2).sub(1).abs().oneMinus()
-}
+})
+
+/**
+ * Apply smooth mirrored repeat, mapping input into [0,1] with symmetry.
+ *
+ * @param {*} coordinate - `float` or `vec[234]`
+ * @return {*} Same type as input, mirrored into [0,1] with smooth easing
+ */
+export const mirrored_repeat_smooth = $.Fn(([coordinate]) => {
+  const fr = coordinate.fract()
+  const ramp = $.smoothstep(0, 1, fr)
+  const is_odd = coordinate.mod(2).floor()
+  return $.mix(ramp, ramp.oneMinus(), is_odd)
+})
+
+/**
+ * Apply smoother mirrored repeat, mapping input into [0,1] with symmetry.
+ *
+ * @param {*} coordinate - `float` or `vec[234]`
+ * @return {*} Same type as input, mirrored into [0,1] with smoother easing
+ */
+export const mirrored_repeat_smoother = $.Fn(([coordinate]) => {
+  const fr = coordinate.fract()
+  const ramp = fr.pow(3).mul(fr.mul(fr.mul(6).sub(15)).add(10))
+  const is_odd = coordinate.mod(2).floor()
+  return $.mix(ramp, ramp.oneMinus(), is_odd)
+})
 
 //
 // 2D Cartesian <-> 2D Polar
@@ -206,7 +232,7 @@ const sign_not_zero = $.Fn(([v]) => {
  *
  * @param {*} v - Normalized 3D vector in Cartesian coordinates (length = 1).
  * @returns {*} Octahedral-encoded 2D vector in [-1, 1]^2.
- * 
+ *
  * @example
  * ```
  * const uv01s = cartesian3d01_to_octahedral2d01s(dir) // snorm [-1,1]
@@ -235,7 +261,7 @@ export const cartesian3d01_to_octahedral2d01s = $.Fn(([v]) => {
  *
  * @param {*} e - Octahedral-encoded 2D vector in [-1, 1]^2.
  * @returns {*} Normalized 3D vector in Cartesian coordinates (length = 1).
- * 
+ *
  * @example
  * ```
  * const dir = octahedral2d01s_to_cartesian3d01(uv01s) // normalized 3D vector
@@ -284,7 +310,7 @@ export const cartesian3d01_to_octahedral2d01 = $.Fn(([v]) => {
  *
  * @param {*} e - Octahedral-encoded 2D vector in [0,1]^2.
  * @returns {*} Normalized 3D vector in Cartesian coordinates (length = 1).
- * 
+ *
  * @example
  * ```
  * const dir = octahedral2d01_to_cartesian3d01(uv01) // normalized 3D vector
