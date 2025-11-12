@@ -16,8 +16,12 @@ import { TSL as $ } from 'three/webgpu'
  * @returns {*} Output in [0,1], same type as k.
  */
 export const smootherstep = $.Fn(([edge0, edge1, k]) => {
-  k = k.sub(edge0).div(edge1.sub(edge0)).clamp(0, 1)
-  return k.pow3().mul(k.mul(k.mul(6).sub(15)).add(10))
+  const diff = edge1.sub(edge0)
+  k = k.sub(edge0).div(diff.abs()).clamp(0, 1)
+  const poly01 = k.pow3().mul(k.mul(k.mul(6).sub(15)).add(10))
+  const is_reversed = diff.lessThan(0)
+  const interpolated01 = $.select(is_reversed, poly01.oneMinus(), poly01)
+  return interpolated01
 })
 
 //
@@ -35,7 +39,7 @@ export const mirrored_repeat01 = $.Fn(([k, half_period = 1]) => {
   half_period = $.float(half_period)
   const ramp01 = k.mod(half_period).div(half_period)
   const is_odd_half = k.div(half_period).mod(2).floor()
-  const mirrored01 = $.mix(ramp01, ramp01.oneMinus(), is_odd_half)
+  const mirrored01 = $.select(is_odd_half, ramp01.oneMinus(), ramp01)
   return mirrored01
 })
 
@@ -63,7 +67,7 @@ export const mirrored_repeat_smooth01 = $.Fn(([k, half_period = 1]) => {
   half_period = $.float(half_period)
   const ramp01 = $.smoothstep(0, half_period, k.mod(half_period))
   const is_odd_half = k.div(half_period).mod(2).floor()
-  const mirrored01 = $.mix(ramp01, ramp01.oneMinus(), is_odd_half)
+  const mirrored01 = $.select(is_odd_half, ramp01.oneMinus(), ramp01)
   return mirrored01
 })
 
@@ -91,7 +95,7 @@ export const mirrored_repeat_smoother01 = $.Fn(([k, half_period = 1]) => {
   half_period = $.float(half_period)
   const ramp01 = smootherstep(0, half_period, k.mod(half_period))
   const is_odd_half = k.div(half_period).mod(2).floor()
-  const mirrored01 = $.mix(ramp01, ramp01.oneMinus(), is_odd_half)
+  const mirrored01 = $.select(is_odd_half, ramp01.oneMinus(), ramp01)
   return mirrored01
 })
 
