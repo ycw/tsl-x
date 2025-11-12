@@ -1,5 +1,29 @@
 import { TSL as $ } from 'three/webgpu'
 
+//
+// Smootherstep
+//
+
+/**
+ * Smootherstep interpolation function.
+ *
+ * Maps input `k` between `edge0` and `edge1` to a smooth curve in [0,1],
+ * with continuous first and second derivatives at the boundaries.
+ *
+ * @param {*} edge0 - Lower edge (`float` or `vec2/vec3/vec4`).
+ * @param {*} edge1 - Upper edge (`float` or `vec2/vec3/vec4`).
+ * @param {*} k - Input value (`float` or `vec2/vec3/vec4`).
+ * @returns {*} Output in [0,1], same type as k.
+ */
+export const smootherstep = $.Fn(([edge0, edge1, k]) => {
+  k = k.sub(edge0).div(edge1.sub(edge0)).clamp(0, 1)
+  return k.pow3().mul(k.mul(k.mul(6).sub(15)).add(10))
+})
+
+//
+// Mirrored repeat
+//
+
 /**
  * Mirrored repeat ramp with output normalized to [0,1].
  *
@@ -65,8 +89,7 @@ export const mirrored_repeat_smooth = $.Fn(([k, half_period = 1]) => {
  */
 export const mirrored_repeat_smoother01 = $.Fn(([k, half_period = 1]) => {
   half_period = $.float(half_period)
-  const fract = k.mod(half_period).div(half_period)
-  const ramp01 = fract.pow(3).mul(fract.mul(fract.mul(6).sub(15)).add(10))
+  const ramp01 = smootherstep(0, half_period, k.mod(half_period))
   const is_odd_half = k.div(half_period).mod(2).floor()
   const mirrored01 = $.mix(ramp01, ramp01.oneMinus(), is_odd_half)
   return mirrored01
