@@ -1,39 +1,88 @@
 import { TSL as $ } from 'three/webgpu'
 
 /**
- * Apply mirrored repeat, mapping input into [0,1] with symmetry.
+ * Mirrored repeat ramp with output normalized to [0,1].
  *
- * @param {*} coordinate - `float` or `vec[234]`
- * @returns {*} Same type as input, mirrored into [0,1]
+ * @param {*} k - Input value (`float` or `vec2/vec3/vec4`).
+ * @param {*} [half_period=1] - Distance to the turning point where the ramp flips direction.
+ * @returns {*} Output in [0,1], same type as k.
  */
-export const mirrored_repeat = $.Fn(([coordinate]) => {
-  return coordinate.mod(2).sub(1).abs().oneMinus()
+export const mirrored_repeat01 = $.Fn(([k, half_period = 1]) => {
+  half_period = $.float(half_period)
+  const ramp01 = k.mod(half_period).div(half_period)
+  const is_odd_half = k.div(half_period).mod(2).floor()
+  const mirrored01 = $.mix(ramp01, ramp01.oneMinus(), is_odd_half)
+  return mirrored01
 })
 
 /**
- * Apply smooth mirrored repeat, mapping input into [0,1] with symmetry.
+ * Mirrored repeat ramp with mirrored output values.
  *
- * @param {*} coordinate - `float` or `vec[234]`
- * @return {*} Same type as input, mirrored into [0,1] with smooth easing
+ * @param {*} k - Input value (`float` or `vec2/vec3/vec4`).
+ * @param {*} [half_period=1] - Distance to the turning point where the ramp flips direction.
+ * @returns {*} Mirrored output, same type as k.
  */
-export const mirrored_repeat_smooth = $.Fn(([coordinate]) => {
-  const fr = coordinate.fract()
-  const ramp = $.smoothstep(0, 1, fr)
-  const is_odd = coordinate.mod(2).floor()
-  return $.mix(ramp, ramp.oneMinus(), is_odd)
+export const mirrored_repeat = $.Fn(([k, half_period = 1]) => {
+  half_period = $.float(half_period)
+  const mirrored01 = mirrored_repeat01(k, half_period)
+  return mirrored01.mul(half_period)
 })
 
 /**
- * Apply smoother mirrored repeat, mapping input into [0,1] with symmetry.
+ * Mirrored repeat ramp with output normalized to [0,1], using smoothstep easing.
  *
- * @param {*} coordinate - `float` or `vec[234]`
- * @return {*} Same type as input, mirrored into [0,1] with smoother easing
+ * @param {*} k - Input value (`float` or `vec2/vec3/vec4`).
+ * @param {*} [half_period=1] - Distance to the turning point where the ramp flips direction.
+ * @returns {*} Output in [0,1] with soft transitions, same type as k.
  */
-export const mirrored_repeat_smoother = $.Fn(([coordinate]) => {
-  const fr = coordinate.fract()
-  const ramp = fr.pow(3).mul(fr.mul(fr.mul(6).sub(15)).add(10))
-  const is_odd = coordinate.mod(2).floor()
-  return $.mix(ramp, ramp.oneMinus(), is_odd)
+export const mirrored_repeat_smooth01 = $.Fn(([k, half_period = 1]) => {
+  half_period = $.float(half_period)
+  const ramp01 = $.smoothstep(0, half_period, k.mod(half_period))
+  const is_odd_half = k.div(half_period).mod(2).floor()
+  const mirrored01 = $.mix(ramp01, ramp01.oneMinus(), is_odd_half)
+  return mirrored01
+})
+
+/**
+ * Mirrored repeat ramp with mirrored output values, using smoothstep easing.
+ *
+ * @param {*} k - Input value (`float` or `vec2/vec3/vec4`).
+ * @param {*} [half_period=1] - Distance to the turning point where the ramp flips direction.
+ * @returns {*} Mirrored output with soft transitions, same type as k.
+ */
+export const mirrored_repeat_smooth = $.Fn(([k, half_period = 1]) => {
+  half_period = $.float(half_period)
+  const mirrored01 = mirrored_repeat_smooth01(k, half_period)
+  return mirrored01.mul(half_period)
+})
+
+/**
+ * Mirrored repeat ramp with output normalized to [0,1], using smootherstep easing.
+ *
+ * @param {*} k - Input value (`float` or `vec2/vec3/vec4`).
+ * @param {*} [half_period=1] - Distance to the turning point where the ramp flips direction.
+ * @returns {*} Output in [0,1] with smoother transitions (continuous derivatives), same type as k.
+ */
+export const mirrored_repeat_smoother01 = $.Fn(([k, half_period = 1]) => {
+  half_period = $.float(half_period)
+  const fract = k.mod(half_period).div(half_period)
+  const ramp01 = fract.pow(3).mul(fract.mul(fract.mul(6).sub(15)).add(10))
+  const is_odd_half = k.div(half_period).mod(2).floor()
+  const mirrored01 = $.mix(ramp01, ramp01.oneMinus(), is_odd_half)
+  return mirrored01
+})
+
+/**
+ * Mirrored repeat ramp with mirrored output values, using smootherstep easing.
+ *
+ * @param {*} k - Input value (`float` or `vec2/vec3/vec4`).
+ * @param {*} [half_period=1] - Distance to the turning point where the ramp flips direction.
+ * @returns {*} Mirrored output with smoother transitions (continuous derivatives), same type as k.
+ */
+export const mirrored_repeat_smoother = $.Fn(([k, half_period = 1]) => {
+  half_period = $.float(half_period)
+  const mirrored01 = mirrored_repeat_smoother01(k, half_period)
+  return mirrored01.mul(half_period)
 })
 
 //
