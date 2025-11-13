@@ -398,3 +398,50 @@ export const octahedral2d01_to_cartesian3d01 = $.Fn(([e]) => {
   const cartesian3d = octahedral2d01s_to_cartesian3d01(octahedral2d01s)
   return cartesian3d
 })
+
+//
+// 2D UV <-> 3D Hemisphere normal
+//
+
+/**
+ * Convert [0,1] UV coordinates into a hemisphere normal (Z+).
+ *
+ * Returns a vec4 where:
+ * - xyz = normalized hemisphere normal pointing towards +Z
+ * - w   = signed distance from the unit circle boundary in the XY-plane
+ *         (w < 0 means inside, w = 0 means on the boundary, w > 0 means outside)
+ *
+ * Notes:
+ * - w is always greater than or equal to -1.
+ * - When w is positive, xyz corresponds to the boundary normal.
+ *
+ * @param {*} uv01 - vec2, UV coordinates in [0,1] range
+ * @returns {*} vec4, with xyz = hemisphere normal, w = signed distance
+ */
+export const uv01_to_hemisphere_normal4 = $.Fn(([uv01]) => {
+  uv01 = $.vec2(uv01)
+  const uv01s = uv01.remap(0, 1, -1, 1)
+  const r_sq = $.lengthSq(uv01s) // x^2 + y^2
+  const r_sq_clamped = r_sq.min(1)
+  const z = $.sqrt(r_sq_clamped.oneMinus()) // since x^2 + y^2 + z^2 = 1 (unit sphere)
+  const normal = $.vec3(uv01s, z).normalize() // ensure precision
+  const signed_distance = r_sq.sub(1)
+  return $.vec4(normal, signed_distance)
+})
+
+/**
+ * Convert a hemisphere normal vec4 back into [0,1] UV coordinates.
+ * - xyz = normalized hemisphere normal pointing towards +Z
+ * - w   = signed distance from the unit circle boundary in the XY-plane
+ *         (w < 0 means inside, w = 0 means on the boundary, w > 0 means outside)
+ *
+ * @param {*} normal4 - vec4, where xyz = hemisphere normal, w = signed distance
+ * @returns {*} vec2, UV coordinates in [0,1] range
+ */
+export const hemisphere_normal4_to_uv01 = $.Fn(([normal4]) => {
+  normal4 = $.vec4(normal4)
+  const r = normal4.w.add(1).sqrt()
+  const dir = normal4.xy.normalize()
+  const uv01 = r.mul(dir).remap(-1, 1, 0, 1)
+  return uv01
+})
