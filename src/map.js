@@ -425,7 +425,8 @@ export const uv01_to_hemisphere_normal4 = $.Fn(([uv01]) => {
   const r_sq_clamped = r_sq.min(1)
   const z = $.sqrt(r_sq_clamped.oneMinus()) // since x^2 + y^2 + z^2 = 1 (unit sphere)
   const normal = $.vec3(uv01s, z).normalize() // ensure precision
-  const signed_distance = r_sq.sub(1)
+  const r = r_sq.sqrt()
+  const signed_distance = r.sub(1)
   return $.vec4(normal, signed_distance)
 })
 
@@ -440,7 +441,7 @@ export const uv01_to_hemisphere_normal4 = $.Fn(([uv01]) => {
  */
 export const hemisphere_normal4_to_uv01 = $.Fn(([normal4]) => {
   normal4 = $.vec4(normal4)
-  const r = normal4.w.add(1).sqrt()
+  const r = normal4.w.add(1)
   const dir = normal4.xy.normalize()
   const uv01 = r.mul(dir).remap(-1, 1, 0, 1)
   return uv01
