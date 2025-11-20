@@ -38,8 +38,8 @@ export const smootherstep = $.Fn(([edge0, edge1, k]) => {
 export const mirrored_repeat01 = $.Fn(([k, half_period = 1]) => {
   half_period = $.float(half_period)
   const ramp01 = k.mod(half_period).div(half_period)
-  const is_odd_half = k.div(half_period).mod(2).greaterThanEqual(1)
-  const mirrored01 = $.select(is_odd_half, ramp01.oneMinus(), ramp01)
+  const is_odd_half = k.div(half_period).mod(2).floor()
+  const mirrored01 = $.mix(ramp01, ramp01.oneMinus(), is_odd_half)
   return mirrored01
 })
 
@@ -66,8 +66,8 @@ export const mirrored_repeat = $.Fn(([k, half_period = 1]) => {
 export const mirrored_repeat_smooth01 = $.Fn(([k, half_period = 1]) => {
   half_period = $.float(half_period)
   const ramp01 = $.smoothstep(0, half_period, k.mod(half_period))
-  const is_odd_half = k.div(half_period).mod(2).greaterThanEqual(1)
-  const mirrored01 = $.select(is_odd_half, ramp01.oneMinus(), ramp01)
+  const is_odd_half = k.div(half_period).mod(2).floor()
+  const mirrored01 = $.mix(ramp01, ramp01.oneMinus(), is_odd_half)
   return mirrored01
 })
 
@@ -94,8 +94,8 @@ export const mirrored_repeat_smooth = $.Fn(([k, half_period = 1]) => {
 export const mirrored_repeat_smoother01 = $.Fn(([k, half_period = 1]) => {
   half_period = $.float(half_period)
   const ramp01 = smootherstep(0, half_period, k.mod(half_period))
-  const is_odd_half = k.div(half_period).mod(2).greaterThanEqual(1)
-  const mirrored01 = $.select(is_odd_half, ramp01.oneMinus(), ramp01)
+  const is_odd_half = k.div(half_period).mod(2).floor()
+  const mirrored01 = $.mix(ramp01, ramp01.oneMinus(), is_odd_half)
   return mirrored01
 })
 
