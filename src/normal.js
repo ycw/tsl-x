@@ -1,4 +1,5 @@
 import { TSL as $ } from 'three/webgpu'
+import { forward_difference_gradient2d, forward_difference_gradient3d } from './difference.js'
 
 /**
  * Computes a perturbed surface normal in view space using a 2D scalar displacement field.
@@ -65,23 +66,6 @@ export const bump_field2d_localspace = (f, k, strength = 1.0, eps = 0.001) => {
 }
 
 /**
- * Approximates the 2D gradient of a scalar field using the forward difference method.
- *
- * @param {*} f - Scalar field function that takes a vec2 and returns a float value.
- * @param {*} k - The 2D coordinate at which to evaluate the bump gradient.
- * @param {*} [eps=0.001] - Small offset step used for finite difference approximation.
- * @returns {*} The estimated gradient vector (df/dx, df/dy) at the given point.
- */
-export const forward_difference_gradient2d = (f, k, eps = 0.001) => {
-  k = $.vec2(k)
-  eps = $.float(eps)
-  const h = f(k)
-  const dfdx = f(k.add($.vec2(eps, 0))).sub(h).div(eps)
-  const dfdy = f(k.add($.vec2(0, eps))).sub(h).div(eps)
-  return $.vec2(dfdx, dfdy)
-}
-
-/**
  * Computes a perturbed surface normal in view space using a 3D scalar displacement field.
  *
  * This function wraps {@link bump_field3d_localspace}, transforming the local-space
@@ -142,25 +126,4 @@ export const bump_field3d_localspace = (f, k, strength = 1.0, eps = 0.001) => {
   const grad_tangent = grad3.sub(n.mul(grad3.dot(n)))
   const localspace_normal = n.sub(grad_tangent.mul(strength))
   return localspace_normal.normalize()
-}
-
-/**
- * Approximates the gradient of a scalar field in 3D using forward finite differences.
- *
- * This helper samples the scalar field at small offsets along each axis and
- * returns the gradient vector (df/dx, df/dy, df/dz).
- *
- * @param {*} f - Scalar field function that takes a vec3 and returns a float value (height).
- * @param {*} k - The 3D coordinate at which to evaluate the gradient.
- * @param {*} [eps=0.001] - Small offset step used for finite difference approximation.
- * @returns {*} Gradient vector of the scalar field at the sample point.
- */
-export const forward_difference_gradient3d = (f, k, eps = 0.001) => {
-  k = $.vec3(k)
-  eps = $.float(eps)
-  const h = f(k)
-  const dfdx = f(k.add($.vec3(eps, 0.0, 0.0))).sub(h).div(eps)
-  const dfdy = f(k.add($.vec3(0.0, eps, 0.0))).sub(h).div(eps)
-  const dfdz = f(k.add($.vec3(0.0, 0.0, eps))).sub(h).div(eps)
-  return $.vec3(dfdx, dfdy, dfdz)
 }
