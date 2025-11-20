@@ -131,7 +131,7 @@ export const compute_wave2d_kernel = ({
   uvspace_impulse_radius = $.float(uvspace_impulse_radius)
   uvspace_impulse_position = $.vec2(uvspace_impulse_position)
   delta_time_in_seconds = $.float(delta_time_in_seconds).min(0.016)
-  const kernel = write_texture2d_kernel(storage_texture_next, (uv01, index2d, size2d) => {
+  const kernel = write_texture2d_kernel(storage_texture_next, (uv01, _index2d, size2d) => {
     const sample_current = $.texture(storage_texture_current, uv01)
     const [h_current, velocity_current] = [sample_current.r, sample_current.g]
     const laplacian_h = central_difference_laplacian2d_to_1d(
