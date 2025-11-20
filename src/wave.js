@@ -7,8 +7,11 @@ import { compute_wave2d_kernel } from './compute.js'
  *
  * The returned context object exposes:
  * - `update()`   = advances the simulation (with substeps).
- * - `sample(uv)` = sample the latest wave state (.r = height, .g = velocity).
+ * - `sample(uv)` = sample the latest wave states, vec2 (.r = height, .g = velocity).
  * - `dispose()`  = releases GPU resources.
+ *
+ * Notes:
+ * - Wave states actual range varies with damping and impulse; not normalized.
  *
  * @param {*} options - Configuration object.
  * @param {*} options.renderer - The compute‑capable renderer instance.
@@ -25,10 +28,11 @@ import { compute_wave2d_kernel } from './compute.js'
  *
  * @example
  * ```
- * const uvspace_impulse_position = vec2(oscSine(time))
- * const ctx = create_wave2d_context({ renderer, uvspace_impulse_position })
- * const h = texture(wave_ctx.texture, uv()).r
- * mat.colorNode = h.remap(-1, 1, 0, 1)   // in-range depends on damping and impulse
+ * const ctx = create_wave2d_context({ 
+ *   renderer,
+ *   uvspace_impulse_position: vec2(oscSine(time))
+ * })
+ * mat.colorNode = ctx.sample(uv()).r.remap(-1, 1, 0, 1)
  * renderer.setAnimationLoop(() => {
  *   ctx.update()
  *   renderer.render(scene, camera)
@@ -92,7 +96,7 @@ export const create_wave2d_context = ({
   }
   const sample = (uv) => {
     const uv_bias = $.vec2(1 / resolution[0], 1 / resolution[1])
-    return $.texture(storage_texture_next_filterable, uv.sub(uv_bias))
+    return $.texture(storage_texture_next_filterable, uv.sub(uv_bias)).rg
   }
   return { update, dispose, sample }
 }
