@@ -3,100 +3,99 @@ import { TSL as $ } from 'three/webgpu'
 import { compute_wave2d_kernel } from './compute.js'
 
 /**
- * Creates a 2D wave simulation context backed by storage textures.
- *
- * The returned context object exposes:
- * - `update()`   = advances the simulation (with substeps).
- * - `sample(uv)` = sample the latest wave states, vec2 (.r = height, .g = velocity).
- * - `dispose()`  = releases GPU resources.
+ * Creates a 2D wave simulation context using ping-pong storage textures and compute kernels.
  *
  * Notes:
- * - Wave states actual range varies with damping and impulse; not normalized.
+ * - The range of sampled height and velocity values is not fixed; it varies depending on
+ *   damping and impulse configuration.
  *
  * @param {*} options - Configuration object.
- * @param {*} options.renderer - The compute‑capable renderer instance.
- * @param {*} [options.resolution=[64,64]] - Texture resolution [width, height].
- * @param {*} [options.substeps=4] - Number of simulation substeps per update.
- * @param {*} [options.uvspace_propagation_per_second=0.1] - Wave propagation speed in UV space.
- * @param {*} [options.damping_per_second=0.1] - Damping factor per second.
- * @param {*} [options.impulse_enabled=true] - Whether to apply an impulse force.
- * @param {*} [options.impulse_per_second=4] - Impulse strength per second.
- * @param {*} [options.uvspace_impulse_radius=0.1] - Impulse radius in UV space.
- * @param {*} [options.uvspace_impulse_position=(0,0)] - Impulse position in UV space.
- * @param {*} [options.delta_time_in_seconds=0.016] - Simulation timestep in seconds.
- * @returns {*} A wave simulation context object.
+ * @param {*} options.renderer - The renderer used to dispatch compute kernels.
+ * @param {*} [options.substeps=2] - Number of simulation substeps per update call.
+ * @param {*} [options.size=32] - Working texture size (simulation resolution).
+ * @param {*} [options.padding=4] - Padding texels around the working area to avoid boundary artifacts.
+ * @param {*} [options.speed=0.1] - Wave propagation speed (uvspace units per second).
+ * @param {*} [options.damping=0.1] - Damping factor (decay rate per second).
+ * @param {*} [options.impulse_enabled=true] - Whether external impulses are applied.
+ * @param {*} [options.impulse_strength=4] - Strength of the impulse force.
+ * @param {*} [options.impulse_radius=0.1] - Radius of impulse influence (uvspace units).
+ * @param {*} [options.impulse_position=(0,0)] - Position of impulse in uvspace coordinates.
+ * @param {*} [options.time_step=0.016] - Simulation timestep in seconds (clamped internally for stability).
+ *
+ * @returns {*} Wave simulation context.
+ * @returns {*} return.update - Advances the simulation by `substeps` and copies results into the filterable texture.
+ * @returns {*} return.sample - Samples the current wave state at given uv coordinates, returning a vec2(height, velocity).
+ * @returns {*} return.dispose - Releases GPU resources associated with the simulation.
  *
  * @example
  * ```
- * const ctx = create_wave2d_context({ 
- *   renderer,
- *   uvspace_impulse_position: vec2(oscSine(time))
- * })
- * mat.colorNode = ctx.sample(uv()).r.remap(-1, 1, 0, 1)
+ * const impulse_position = vec2(oscSine(time))
+ * const wave = create_wave2d_context({ renderer, impulse_position })
+ * mat.colorNode = wave.sample(uv()).r.remap(-1, 1, 0, 1)
  * renderer.setAnimationLoop(() => {
- *   ctx.update()
+ *   wave.update()
  *   renderer.render(scene, camera)
  * })
  * ```
  */
 export const create_wave2d_context = ({
   renderer,
-  resolution = [64, 64],
-  substeps = 4,
-  uvspace_propagation_per_second = 0.1,
-  damping_per_second = 0.1,
+  substeps = 2,
+  size = 32,
+  padding = 4,
+  speed = 0.1,
+  damping = 0.1,
   impulse_enabled = true,
-  impulse_per_second = 4,
-  uvspace_impulse_radius = 0.1,
-  uvspace_impulse_position = $.vec2(0, 0),
-  delta_time_in_seconds = 0.016
+  impulse_strength = 4,
+  impulse_radius = 0.1,
+  impulse_position = $.vec2(0, 0),
+  timestep = 0.016
 }) => {
-  const storage_texture_current = new THREE.StorageTexture(...resolution)
-  storage_texture_current.type = THREE.FloatType
-  storage_texture_current.generateMipmaps = false
-  storage_texture_current.minFilter = THREE.NearestFilter
-  storage_texture_current.magFilter = THREE.NearestFilter
+  const states0 = new THREE.StorageTexture(size + 2 * padding, size + 2 * padding)
+  const states1 = new THREE.StorageTexture(size + 2 * padding, size + 2 * padding)
+  states0.type = states1.type = THREE.FloatType
+  states0.generateMipmaps = states1.generateMipmaps = false
+  states0.minFilter = states1.minFilter = THREE.NearestFilter
+  states0.magFilter = states1.magFilter = THREE.NearestFilter
 
-  const storage_texture_next = new THREE.StorageTexture(...resolution)
-  storage_texture_next.type = THREE.FloatType
-  storage_texture_next.generateMipmaps = false
-  storage_texture_next.minFilter = THREE.NearestFilter
-  storage_texture_next.magFilter = THREE.NearestFilter
+  const states = new THREE.StorageTexture(size, size)
+  states.type = THREE.FloatType
+  states.generateMipmaps = true
+  states.minFilter = THREE.LinearFilter
+  states.magFilter = THREE.LinearFilter
 
-  const storage_texture_next_filterable = new THREE.StorageTexture(...resolution)
-  storage_texture_next_filterable.type = THREE.FloatType
-  storage_texture_next_filterable.generateMipmaps = true
-  storage_texture_next_filterable.minFilter = THREE.LinearFilter
-  storage_texture_next_filterable.magFilter = THREE.LinearFilter
+  const c = { padding, speed, damping, impulse_enabled, impulse_strength, impulse_radius, impulse_position, timestep }
+  const ping = compute_wave2d_kernel({ ...c, states_for_read: states0, states_for_write: states1 })
+  const pong = compute_wave2d_kernel({ ...c, states_for_read: states1, states_for_write: states0 })
+  const copy_region = new THREE.Box2(
+    new THREE.Vector2(padding, padding),
+    new THREE.Vector2(padding + size, padding + size)
+  )
 
-  const wave2d_kernel = compute_wave2d_kernel({
-    storage_texture_current,
-    storage_texture_next,
-    uvspace_propagation_per_second,
-    damping_per_second,
-    impulse_enabled,
-    impulse_per_second,
-    uvspace_impulse_radius,
-    uvspace_impulse_position,
-    delta_time_in_seconds
-  })
+  let pingpong = 0
   const update = () => {
     for (let i = 0; i < substeps; ++i) {
-      renderer.compute(wave2d_kernel)
-      renderer.backend.copyTextureToTexture(storage_texture_next, storage_texture_current)
+      pingpong ^= 1
+      renderer.compute(pingpong ? ping : pong)
     }
-    queueMicrotask(() => {
-      renderer.backend.copyTextureToTexture(storage_texture_next, storage_texture_next_filterable)
-    })
+    queueMicrotask(() =>
+      renderer.backend.copyTextureToTexture(
+        pingpong ? states0 : states1,
+        states,
+        copy_region
+      )
+    )
   }
-  const dispose = () => {
-    storage_texture_current.dispose()
-    storage_texture_next.dispose()
-    storage_texture_next_filterable.dispose()
-  }
+
   const sample = (uv) => {
-    const uv_bias = $.vec2(1 / resolution[0], 1 / resolution[1])
-    return $.texture(storage_texture_next_filterable, uv.sub(uv_bias)).rg
+    return $.texture(states, uv).rg
   }
+
+  const dispose = () => {
+    states0.dispose()
+    states1.dispose()
+    states.dispose()
+  }
+
   return { update, dispose, sample }
 }
