@@ -1,5 +1,5 @@
 import { TSL as $ } from 'three/webgpu'
-import { forward_difference_gradient2d, forward_difference_gradient3d } from './difference.js'
+import { central_difference_gradient2d, central_difference_gradient3d } from './difference.js'
 
 /**
  * Computes a perturbed surface normal in view space using a 2D scalar displacement field.
@@ -58,7 +58,7 @@ export const bump_field2d_localspace = (f, k, strength = 1.0, eps = 0.001) => {
   k = $.vec2(k)
   strength = $.float(strength)
   eps = $.float(eps)
-  const df = forward_difference_gradient2d(f, k, eps).mul(strength)
+  const df = central_difference_gradient2d(f, k, eps).mul(strength)
   const dpds = $.tangentLocal.add($.normalLocal.mul(df.s))
   const dpdt = $.bitangentLocal.add($.normalLocal.mul(df.t))
   const localspace_normal = dpds.cross(dpdt).mul($.faceDirection)
@@ -122,7 +122,7 @@ export const bump_field3d_localspace = (f, k, strength = 1.0, eps = 0.001) => {
   strength = $.float(strength)
   eps = $.float(eps)
   const n = $.normalLocal.normalize()
-  const grad3 = forward_difference_gradient3d(f, k, eps)
+  const grad3 = central_difference_gradient3d(f, k, eps)
   const grad_tangent = grad3.sub(n.mul(grad3.dot(n)))
   const localspace_normal = n.sub(grad_tangent.mul(strength))
   return localspace_normal.normalize()
