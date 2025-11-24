@@ -1,5 +1,4 @@
 import { TSL as $ } from 'three/webgpu'
-import { central_difference_laplacian2d } from './difference.js'
 
 /**
  * Creates a compute kernel that writes values into a 2D storage texture.
@@ -71,80 +70,5 @@ export const write_texture3d_kernel = (tex, f) => {
     const value = f(uvw01, index3d, size3d)
     $.textureStore(tex, $.uvec3(index3d), value)
   })().compute(tex.width * tex.height * tex.depth)
-  return kernel
-}
-
-/**
- * Builds a compute kernel for simulating 2D wave propagation using ping-pong storage textures.
- *
- * Notes:
- * - The range of sampled height and velocity values is not fixed; it varies depending on
- *   damping and impulse configuration.
- * - The timestep is clamped internally for stability (~0.016s by default).
- *
- * @param {*} options - Configuration object.
- * @param {*} options.states_for_read - Storage texture to read current wave state (vec2: height, velocity).
- * @param {*} options.states_for_write - Storage texture to write updated wave state.
- * @param {*} [options.padding=0] - Padding texels around the working area to avoid boundary artifacts.
- * @param {*} [options.speed=0.05] - Wave propagation speed (uvspace units per second).
- * @param {*} [options.damping=0.05] - Damping factor (decay rate per second).
- * @param {*} [options.impulse_enabled=true] - Whether external impulses are applied.
- * @param {*} [options.impulse_strength=0.5] - Strength of the impulse force.
- * @param {*} [options.impulse_radius=0.2] - Radius of impulse influence (uvspace units).
- * @param {*} [options.impulse_position=(0,0)] - Position of impulse in uvspace coordinates.
- * @param {*} [options.timestep=0.016] - Simulation timestep in seconds (clamped internally).
- *
- * @returns {*} A compute kernel function that updates the wave state when dispatched.
- *
- * @example
- * ```js
- * const states0 = new THREE.StorageTexture(32, 32)
- * const states1 = new THREE.StorageTexture(32, 32)
- * states0.type = states1.type = THREE.FloatType
- * states0.generateMipmaps = states1.generateMipmaps = false
- * states0.minFilter = states1.minFilter = THREE.NearestFilter
- * states0.magFilter = states1.magFilter = THREE.NearestFilter
- *
- * const kernel = compute_wave2d_kernel({ states0, states1 })
- * renderer.compute(kernel)
- * ```
- */
-export const compute_wave2d_kernel = ({
-  states_for_read,
-  states_for_write,
-  padding = 0,
-  speed = 0.1,
-  damping = 0.1,
-  impulse_enabled = true,
-  impulse_strength = 4,
-  impulse_radius = 0.1,
-  impulse_position = $.vec2(0, 0),
-  timestep = 0.016
-}) => {
-  speed = $.float(speed)
-  damping = $.float(damping)
-  impulse_enabled = $.bool(impulse_enabled)
-  impulse_strength = $.float(impulse_strength)
-  impulse_radius = $.float(impulse_radius)
-  impulse_position = $.vec2(impulse_position)
-  timestep = $.float(timestep).min(0.016)
-  const scale = states_for_read.width / (states_for_read.width + 2 * padding)
-  const scaled_wave_speed = speed.mul(scale)
-  const scaled_impulse_radius = impulse_radius.mul(scale)
-  const scaled_impulse_position = impulse_position.sub(0.5).mul(scale).add(0.5)
-  const kernel = write_texture2d_kernel(states_for_write, (uv01, _, size2d) => {
-    const h_sampler = (xy) => $.texture(states_for_read, xy).r
-    const laplacian = central_difference_laplacian2d(h_sampler, uv01, size2d.reciprocal())
-      .mul(scaled_wave_speed.pow2(), timestep)
-    const impulse = $.smoothstep(scaled_impulse_radius, 0, uv01.distance(scaled_impulse_position))
-      .mul(impulse_strength, timestep)
-      .mul(impulse_enabled)
-    const damping_term = $.exp(damping.mul(timestep).negate())
-    const states = $.texture(states_for_read, uv01)
-    const [h, v] = [states.r, states.g]
-    const v1 = $.add(v, laplacian, impulse).mul(damping_term)
-    const h1 = h.add(v1.mul(timestep))
-    return $.vec2(h1, v1)
-  })
   return kernel
 }
