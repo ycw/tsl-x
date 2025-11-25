@@ -55,23 +55,25 @@ const compute_wave2d_kernel = ({
   impulse_strength = $.float(impulse_strength)
   impulse_radius = $.float(impulse_radius)
   impulse_position = $.vec2(impulse_position)
-  timestep = $.float(timestep).min(0.016)
-  const effective_to_working_scale = (states_for_read.width - 2 * padding) / states_for_read.width
-  const working_speed = speed.mul(effective_to_working_scale)
+  timestep = $.float(timestep).min(0.016).toConst()
+  const working_size = states_for_read.width
+  const effective_to_working_scale = $.float((working_size - 2 * padding) / working_size).toConst()
+  const working_speed = speed.mul(effective_to_working_scale).toConst()
   const working_impulse_radius = impulse_radius.mul(effective_to_working_scale)
   const working_impulse_position = impulse_position.sub(0.5).mul(effective_to_working_scale).add(0.5)
-  const kernel = write_texture2d_kernel(states_for_write, (working_uv01, _, size2d) => {
-    const h_sampler = (xy) => $.texture(states_for_read, xy).r
-    const laplacian = central_difference_laplacian2d(h_sampler, working_uv01, size2d.reciprocal())
-      .mul(working_speed.pow2(), timestep)
-    const impulse = $.smoothstep(working_impulse_radius, 0, working_uv01.distance(working_impulse_position))
-      .mul(impulse_strength, timestep)
-      .mul(impulse_enabled)
-    const damping_term = $.exp(damping.mul(timestep).negate())
-    const states = $.texture(states_for_read, working_uv01)
-    const [h, v] = [states.r, states.g]
-    const v1 = $.add(v, laplacian, impulse).mul(damping_term)
-    const h1 = h.add(v1.mul(timestep))
+  const working_speed_sq_per_second = $.mul(working_speed.pow2(), timestep)
+  const impulse_per_second = $.mul(impulse_enabled.toFloat(), impulse_strength, timestep)
+  const damping_per_second = $.exp(damping.mul(timestep).negate())
+  const h_sampler = (uv01) => $.texture(states_for_read, uv01).r
+  const kernel = write_texture2d_kernel(states_for_write, (working_uv01) => {
+    const laplacian_h = central_difference_laplacian2d(h_sampler, working_uv01, 1 / working_size)
+    const acceleration = $.mul(working_speed_sq_per_second, laplacian_h)
+    const impulse_fac = $.smoothstep(working_impulse_radius, 0, working_uv01.distance(working_impulse_position))
+    const impulse = $.mul(impulse_per_second, impulse_fac)
+    const current_states = $.texture(states_for_read, working_uv01)
+    const [h, v] = [current_states.r, current_states.g]
+    const v1 = $.add(v, acceleration, impulse).mul(damping_per_second)
+    const h1 = $.add(h, v1.mul(timestep))
     return $.vec2(h1, v1)
   })
   return kernel
@@ -79,6 +81,7 @@ const compute_wave2d_kernel = ({
 
 /**
  * Creates a 2D wave simulation context using ping-pong storage textures and compute kernels.
+ * Results are copied to a filterable texture for smooth wave output from low‑res working textures.
  *
  * Returns wave simulation context:
  * - update(timestep) = advances simulation by given elapsed time, internally split into fixed substeps (0.016s)
@@ -123,17 +126,24 @@ export const create_wave2d_context = ({
   impulse_radius = 0.1,
   impulse_position = $.vec2(0, 0)
 }) => {
+  // https://www.w3.org/TR/webgpu/#texture-format-caps
+  const [texture_format, texture_type] = renderer.backend.device.features.has('texture-formats-tier1')
+    ? [THREE.RGFormat, THREE.HalfFloatType]
+    : [THREE.RGBAFormat, THREE.HalfFloatType]
+
   const working_size = size + 2 * padding
   const states0 = new THREE.StorageTexture(working_size, working_size)
   const states1 = new THREE.StorageTexture(working_size, working_size)
-  states0.type = states1.type = THREE.FloatType
+  states0.format = states1.format = texture_format
+  states0.type = states1.type = texture_type
   states0.generateMipmaps = states1.generateMipmaps = false
   states0.minFilter = states1.minFilter = THREE.NearestFilter
   states0.magFilter = states1.magFilter = THREE.NearestFilter
 
   const effective_size = size
   const states = new THREE.StorageTexture(effective_size, effective_size)
-  states.type = THREE.FloatType
+  states.format = texture_format
+  states.type = texture_type
   states.generateMipmaps = true
   states.minFilter = THREE.LinearFilter
   states.magFilter = THREE.LinearFilter
