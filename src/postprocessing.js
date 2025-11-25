@@ -22,7 +22,7 @@ import { TSL as $ } from 'three/webgpu'
  */
 export const ndc_displacement2d = (pass) => {
   const name = 'ndc_position2d'
-  const clipspace_position = $.modelViewProjection.mul($.positionLocal)
+  const clipspace_position = $.modelViewProjection.mul($.positionLocal).toConst()
   const ndc_position2d = clipspace_position.xy.div(clipspace_position.w)
   const additional_mrt = $.mrt({ [name]: ndc_position2d })
   pass.setMRT(pass.getMRT().merge(additional_mrt))

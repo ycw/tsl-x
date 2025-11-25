@@ -16,9 +16,9 @@ import { TSL as $ } from 'three/webgpu'
  * @returns {*} Output in [0, 1], same type as k.
  */
 export const smootherstep = $.Fn(([edge0, edge1, k]) => {
-  const diff = edge1.sub(edge0)
-  k = k.sub(edge0).div(diff.abs()).clamp(0, 1)
-  const poly01 = k.pow3().mul(k.mul(k.mul(6).sub(15)).add(10))
+  const diff = edge1.sub(edge0).toConst()
+  k = k.sub(edge0).div(diff.abs()).clamp(0, 1).toConst()
+  const poly01 = k.pow3().mul(k.mul(k.mul(6).sub(15)).add(10)).toConst()
   const is_reversed = diff.lessThan(0)
   const interpolated01 = $.select(is_reversed, poly01.oneMinus(), poly01)
   return interpolated01
@@ -36,7 +36,7 @@ export const smootherstep = $.Fn(([edge0, edge1, k]) => {
  * @returns {*} Output in [0, 1], same type as k.
  */
 export const mirrored_repeat01 = $.Fn(([k, half_period = 1]) => {
-  half_period = $.float(half_period)
+  half_period = $.float(half_period).toConst()
   const ramp01 = k.mod(half_period).div(half_period)
   const is_odd_half = k.div(half_period).mod(2).floor()
   const mirrored01 = $.mix(ramp01, ramp01.oneMinus(), is_odd_half)
@@ -51,7 +51,7 @@ export const mirrored_repeat01 = $.Fn(([k, half_period = 1]) => {
  * @returns {*} Mirrored output, same type as k.
  */
 export const mirrored_repeat = $.Fn(([k, half_period = 1]) => {
-  half_period = $.float(half_period)
+  half_period = $.float(half_period).toConst()
   const mirrored01 = mirrored_repeat01(k, half_period)
   return mirrored01.mul(half_period)
 })
@@ -64,8 +64,8 @@ export const mirrored_repeat = $.Fn(([k, half_period = 1]) => {
  * @returns {*} Output in [0, 1] with soft transitions, same type as k.
  */
 export const mirrored_repeat_smooth01 = $.Fn(([k, half_period = 1]) => {
-  half_period = $.float(half_period)
-  const ramp01 = $.smoothstep(0, half_period, k.mod(half_period))
+  half_period = $.float(half_period).toConst()
+  const ramp01 = $.smoothstep(0, half_period, k.mod(half_period)).toConst()
   const is_odd_half = k.div(half_period).mod(2).floor()
   const mirrored01 = $.mix(ramp01, ramp01.oneMinus(), is_odd_half)
   return mirrored01
@@ -79,7 +79,7 @@ export const mirrored_repeat_smooth01 = $.Fn(([k, half_period = 1]) => {
  * @returns {*} Mirrored output with soft transitions, same type as k.
  */
 export const mirrored_repeat_smooth = $.Fn(([k, half_period = 1]) => {
-  half_period = $.float(half_period)
+  half_period = $.float(half_period).toConst()
   const mirrored01 = mirrored_repeat_smooth01(k, half_period)
   return mirrored01.mul(half_period)
 })
@@ -92,8 +92,8 @@ export const mirrored_repeat_smooth = $.Fn(([k, half_period = 1]) => {
  * @returns {*} Output in [0, 1] with smoother transitions (continuous derivatives), same type as k.
  */
 export const mirrored_repeat_smoother01 = $.Fn(([k, half_period = 1]) => {
-  half_period = $.float(half_period)
-  const ramp01 = smootherstep(0, half_period, k.mod(half_period))
+  half_period = $.float(half_period).toConst()
+  const ramp01 = smootherstep(0, half_period, k.mod(half_period)).toConst()
   const is_odd_half = k.div(half_period).mod(2).floor()
   const mirrored01 = $.mix(ramp01, ramp01.oneMinus(), is_odd_half)
   return mirrored01
@@ -107,7 +107,7 @@ export const mirrored_repeat_smoother01 = $.Fn(([k, half_period = 1]) => {
  * @returns {*} Mirrored output with smoother transitions (continuous derivatives), same type as k.
  */
 export const mirrored_repeat_smoother = $.Fn(([k, half_period = 1]) => {
-  half_period = $.float(half_period)
+  half_period = $.float(half_period).toConst()
   const mirrored01 = mirrored_repeat_smoother01(k, half_period)
   return mirrored01.mul(half_period)
 })
@@ -130,7 +130,7 @@ export const mirrored_repeat_smoother = $.Fn(([k, half_period = 1]) => {
 export const cartesian2d_to_polar2d = $.Fn(([cartesian2d, origin = $.vec2(0, 0)]) => {
   cartesian2d = $.vec2(cartesian2d)
   origin = $.vec2(origin)
-  const offset = cartesian2d.sub(origin)
+  const offset = cartesian2d.sub(origin).toConst()
   const radius = $.length(offset)
   const theta = $.atan(offset.y, offset.x)
   const polar2d = $.vec2(radius, theta)
@@ -149,7 +149,7 @@ export const cartesian2d_to_polar2d = $.Fn(([cartesian2d, origin = $.vec2(0, 0)]
  * @returns {*} 2D Cartesian coordinates.
  */
 export const polar2d_to_cartesian2d = $.Fn(([polar2d, origin = $.vec2(0, 0)]) => {
-  polar2d = $.vec2(polar2d)
+  polar2d = $.vec2(polar2d).toConst()
   origin = $.vec2(origin)
   const radius = polar2d.x
   const theta = polar2d.y
@@ -173,7 +173,7 @@ export const polar2d_to_cartesian2d = $.Fn(([polar2d, origin = $.vec2(0, 0)]) =>
 export const cartesian2d_to_polar2d01 = $.Fn(([cartesian2d, origin = $.vec2(0, 0)]) => {
   cartesian2d = $.vec2(cartesian2d)
   origin = $.vec2(origin)
-  const polar2d = cartesian2d_to_polar2d(cartesian2d, origin)
+  const polar2d = cartesian2d_to_polar2d(cartesian2d, origin).toConst()
   const radius = polar2d.x
   const theta01 = polar2d.y.remap(-Math.PI, Math.PI, 0, 1)
   const polar2d01 = $.vec2(radius, theta01)
@@ -192,7 +192,7 @@ export const cartesian2d_to_polar2d01 = $.Fn(([cartesian2d, origin = $.vec2(0, 0
  * @returns {*} 2D Cartesian coordinates
  */
 export const polar2d01_to_cartesian2d = $.Fn(([polar2d01, origin = $.vec2(0, 0)]) => {
-  polar2d01 = $.vec2(polar2d01)
+  polar2d01 = $.vec2(polar2d01).toConst()
   origin = $.vec2(origin)
   const radius = polar2d01.x
   const theta = polar2d01.y.remap(0, 1, -Math.PI, Math.PI)
@@ -220,7 +220,7 @@ export const polar2d01_to_cartesian2d = $.Fn(([polar2d01, origin = $.vec2(0, 0)]
 export const cartesian3d_to_spherical3d = $.Fn(([cartesian3d, origin = $.vec3(0, 0, 0)]) => {
   cartesian3d = $.vec3(cartesian3d)
   origin = $.vec3(origin)
-  const offset = cartesian3d.sub(origin)
+  const offset = cartesian3d.sub(origin).toConst()
   const radius = $.length(offset)
   const azimuth = $.atan(offset.x, offset.z)
   const inclination = $.acos(offset.y.div(radius))
@@ -241,7 +241,7 @@ export const cartesian3d_to_spherical3d = $.Fn(([cartesian3d, origin = $.vec3(0,
  * @returns {*} 3D Cartesian coordinates.
  */
 export const spherical3d_to_cartesian3d = $.Fn(([spherical3d, origin = $.vec3(0, 0, 0)]) => {
-  spherical3d = $.vec3(spherical3d)
+  spherical3d = $.vec3(spherical3d).toConst()
   origin = $.vec3(origin)
   const radius = spherical3d.x
   const azimuth = spherical3d.y
@@ -268,7 +268,7 @@ export const spherical3d_to_cartesian3d = $.Fn(([spherical3d, origin = $.vec3(0,
 export const cartesian3d_to_spherical3d01 = $.Fn(([cartesian3d, origin = $.vec3(0, 0, 0)]) => {
   cartesian3d = $.vec3(cartesian3d)
   origin = $.vec3(origin)
-  const spherical3d = cartesian3d_to_spherical3d(cartesian3d, origin)
+  const spherical3d = cartesian3d_to_spherical3d(cartesian3d, origin).toConst()
   const radius = spherical3d.x
   const azimuth01 = spherical3d.y.remap(-Math.PI, Math.PI, 0, 1)
   const inclination01 = spherical3d.z.remap(0, Math.PI, 0, 1)
@@ -289,7 +289,7 @@ export const cartesian3d_to_spherical3d01 = $.Fn(([cartesian3d, origin = $.vec3(
  * @returns {*} 3D Cartesian coordinates.
  */
 export const spherical3d01_to_cartesian3d = $.Fn(([spherical3d01, origin = $.vec3(0, 0, 0)]) => {
-  spherical3d01 = $.vec3(spherical3d01)
+  spherical3d01 = $.vec3(spherical3d01).toConst()
   origin = $.vec3(origin)
   const radius = spherical3d01.x
   const azimuth = spherical3d01.y.remap(0, 1, -Math.PI, Math.PI)
@@ -314,7 +314,7 @@ export const spherical3d01_to_cartesian3d = $.Fn(([spherical3d01, origin = $.vec
  * @private
  */
 const sign_not_zero = $.Fn(([v]) => {
-  v = $.vec2(v)
+  v = $.vec2(v).toConst()
   return $.vec2(
     $.select(v.x.greaterThanEqual(0), 1, -1),
     $.select(v.y.greaterThanEqual(0), 1, -1)
@@ -340,10 +340,10 @@ const sign_not_zero = $.Fn(([v]) => {
  * ```
  */
 export const cartesian3d01_to_octahedral2d01s = $.Fn(([v]) => {
-  v = $.vec3(v)
+  v = $.vec3(v).toConst()
   const p = v.xy.mul(
     v.x.abs().add(v.y.abs()).add(v.z.abs()).reciprocal()
-  )
+  ).toConst()
   return $.select(
     v.z.lessThanEqual(0),
     p.yx.abs().oneMinus().mul(sign_not_zero(p)),
@@ -369,8 +369,8 @@ export const cartesian3d01_to_octahedral2d01s = $.Fn(([v]) => {
  * ```
  */
 export const octahedral2d01s_to_cartesian3d01 = $.Fn(([e]) => {
-  e = $.vec2(e)
-  const v = $.vec3(e.xy, $.float(1.0).sub(e.x.abs()).sub(e.y.abs()))
+  e = $.vec2(e).toConst()
+  const v = $.vec3(e.xy, $.float(1.0).sub(e.x.abs()).sub(e.y.abs())).toConst()
   const xy = $.select(
     v.z.lessThan(0),
     v.yx.abs().oneMinus().mul(sign_not_zero(v.xy)),
@@ -442,7 +442,7 @@ export const octahedral2d01_to_cartesian3d01 = $.Fn(([e]) => {
 export const cartesian2d01_to_hemisphere4d = $.Fn(([cartesian2d01]) => {
   cartesian2d01 = $.vec2(cartesian2d01)
   const uv01s = cartesian2d01.remap(0, 1, -1, 1)
-  const r_sq = $.lengthSq(uv01s) // x^2 + y^2
+  const r_sq = $.lengthSq(uv01s).toConst() // x^2 + y^2
   const r_sq_clamped = r_sq.min(1)
   const z = $.sqrt(r_sq_clamped.oneMinus()) // since x^2 + y^2 + z^2 = 1 (unit sphere)
   const normal = $.vec3(uv01s, z).normalize() // ensure precision
@@ -464,7 +464,7 @@ export const cartesian2d01_to_hemisphere4d = $.Fn(([cartesian2d01]) => {
  * @returns {*} Normalized 2D Cartesian coordinates.
  */
 export const hemisphere4d_to_cartesian2d01 = $.Fn(([hemisphere4d]) => {
-  hemisphere4d = $.vec4(hemisphere4d)
+  hemisphere4d = $.vec4(hemisphere4d).toConst()
   const r = hemisphere4d.w.add(1)
   const dir = hemisphere4d.xy.normalize()
   const cartesian2d01 = r.mul(dir).remap(-1, 1, 0, 1)

@@ -13,13 +13,13 @@ import { TSL as $ } from 'three/webgpu'
  * @returns {*} The estimated gradient vector (df/dx, df/dy) at the given point.
  */
 export const central_difference_gradient2d = (f, xy, step = $.vec2(0.001, 0.001)) => {
-  xy = $.vec2(xy)
-  step = $.vec2(step)
+  xy = $.vec2(xy).toConst()
+  step = $.vec2(step).toConst()
   const sample_1step_backward_x = f(xy.sub($.vec2(step.x, 0)))
   const sample_1step_forward_x = f(xy.add($.vec2(step.x, 0)))
   const sample_1step_backward_y = f(xy.sub($.vec2(0, step.y)))
   const sample_1step_forward_y = f(xy.add($.vec2(0, step.y)))
-  const two_steps = step.mul(2)
+  const two_steps = step.mul(2).toConst()
   const dfdx = $.sub(sample_1step_forward_x, sample_1step_backward_x).div(two_steps.x)
   const dfdy = $.sub(sample_1step_forward_y, sample_1step_backward_y).div(two_steps.y)
   return $.vec2(dfdx, dfdy)
@@ -34,8 +34,8 @@ export const central_difference_gradient2d = (f, xy, step = $.vec2(0.001, 0.001)
  * @returns {*} The estimated gradient vector (df/dx, df/dy, df/dz) at the given point.
  */
 export const central_difference_gradient3d = (f, xyz, step = $.vec3(0.001, 0.001, 0.001)) => {
-  xyz = $.vec3(xyz)
-  step = $.vec3(step)
+  xyz = $.vec3(xyz).toConst()
+  step = $.vec3(step).toConst()
   const sample_1step_backward_x = f(xyz.sub($.vec3(step.x, 0, 0)))
   const sample_1step_forward_x = f(xyz.add($.vec3(step.x, 0, 0)))
   const sample_1step_backward_y = f(xyz.sub($.vec3(0, step.y, 0)))
@@ -82,8 +82,8 @@ const laplacian_3point = (a, b, c, step) => {
  * @returns {*} Scalar value (float) representing the Laplacian at the given point.
  */
 export const central_difference_laplacian2d = (f, xy, step = $.vec2(0.001, 0.001)) => {
-  xy = $.vec2(xy)
-  step = $.vec2(step)
+  xy = $.vec2(xy).toConst()
+  step = $.vec2(step).toConst()
   const sample = f(xy)
   const sample_1step_backward_x = f(xy.sub($.vec2(step.x, 0)))
   const sample_1step_forward_x = f(xy.add($.vec2(step.x, 0)))

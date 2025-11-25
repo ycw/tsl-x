@@ -28,7 +28,7 @@ export const write_texture2d_kernel = (tex, f) => {
     const index2d = $.vec2(
       $.instanceIndex.mod(tex.width),
       $.instanceIndex.div(tex.width)
-    )
+    ).toConst()
     const uv01 = index2d.div(bounds)
     const value = f(uv01, index2d, size2d)
     $.textureStore(tex, $.uvec2(index2d), value)
@@ -65,7 +65,7 @@ export const write_texture3d_kernel = (tex, f) => {
       $.instanceIndex.mod(tex.width),
       $.instanceIndex.div(tex.width).mod(tex.height),
       $.instanceIndex.div(tex.width * tex.height)
-    )
+    ).toConst()
     const uvw01 = index3d.div(bounds)
     const value = f(uvw01, index3d, size3d)
     $.textureStore(tex, $.uvec3(index3d), value)
