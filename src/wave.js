@@ -55,24 +55,22 @@ const compute_wave2d_kernel = ({
   impulse_strength = $.float(impulse_strength)
   impulse_radius = $.float(impulse_radius)
   impulse_position = $.vec2(impulse_position)
-  timestep = $.float(timestep).min(0.016).toConst()
+  timestep = $.float(timestep) //.min(0.016).toConst()
   const working_size = states_for_read.width
   const effective_to_working_scale = $.float((working_size - 2 * padding) / working_size).toConst()
-  const working_speed = speed.mul(effective_to_working_scale).toConst()
   const working_impulse_radius = impulse_radius.mul(effective_to_working_scale)
   const working_impulse_position = impulse_position.sub(0.5).mul(effective_to_working_scale).add(0.5)
-  const working_speed_sq_per_second = $.mul(working_speed.pow2(), timestep)
-  const impulse_per_second = $.mul(impulse_enabled.toFloat(), impulse_strength, timestep)
-  const damping_per_second = $.exp(damping.mul(timestep).negate())
+  const working_speed = speed.mul(effective_to_working_scale)
   const h_sampler = (uv01) => $.texture(states_for_read, uv01).r
   const kernel = write_texture2d_kernel(states_for_write, (working_uv01) => {
     const laplacian_h = central_difference_laplacian2d(h_sampler, working_uv01, 1 / working_size)
-    const acceleration = $.mul(working_speed_sq_per_second, laplacian_h)
+    const accel_per_second = $.mul(working_speed.pow2(), laplacian_h, timestep)
     const impulse_fac = $.smoothstep(working_impulse_radius, 0, working_uv01.distance(working_impulse_position))
-    const impulse = $.mul(impulse_per_second, impulse_fac)
-    const current_states = $.texture(states_for_read, working_uv01)
+    const impulse_per_second = $.mul(impulse_fac, impulse_strength, timestep, impulse_enabled)
+    const damping_per_second = $.exp(damping.mul(timestep).negate())
+    const current_states = $.texture(states_for_read, working_uv01).toConst()
     const [h, v] = [current_states.r, current_states.g]
-    const v1 = $.add(v, acceleration, impulse).mul(damping_per_second)
+    const v1 = $.add(v, accel_per_second, impulse_per_second).mul(damping_per_second)
     const h1 = $.add(h, v1.mul(timestep))
     return $.vec2(h1, v1)
   })
@@ -150,7 +148,7 @@ export const create_wave2d_context = ({
 
   const kernel_options = {
     padding,
-    speed,
+    speed: $.uniform('float'),
     damping,
     impulse_enabled,
     impulse_strength,
@@ -165,18 +163,22 @@ export const create_wave2d_context = ({
     new THREE.Vector2(padding + effective_size, padding + effective_size)
   )
 
-  const TIMESTEP_SUBSTEP = 0.016
+  // CFL stability condition for explicit wave update:
+  //   speed * dt / dx <= 1
+  // Use a safety margin (0.34 < 1) to avoid edge‑case instability.
+  //
+  // Implementation detail:
+  // - safe_speed = clamp user `speed` so CFL ratio never exceeds margin.
+  // - if `speed` > safe_speed, split update into multiple substeps.
+  //    Each substep uses safe_speed, so overall propagation matches `speed`.
+  const CFL_MARGIN = 0.34
   let pingpong = 0
   const update = (timestep = 0.016) => {
-    const timestep_substeps_count = Math.floor(timestep / TIMESTEP_SUBSTEP)
-    kernel_options.timestep.value = TIMESTEP_SUBSTEP
-    for (let i = 0; i < timestep_substeps_count; ++i) {
-      pingpong ^= 1
-      renderer.compute(pingpong ? ping : pong)
-    }
-    const timestep_remaining = timestep - timestep_substeps_count * TIMESTEP_SUBSTEP
-    if (timestep_remaining > 0) {
-      kernel_options.timestep.value = timestep_remaining
+    const safe_speed = Math.min(speed, CFL_MARGIN / (working_size * timestep))
+    const repeat_count = Math.ceil(speed / safe_speed)
+    kernel_options.timestep.value = timestep
+    kernel_options.speed.value = safe_speed
+    for (let i = 0; i < repeat_count; ++i) {
       pingpong ^= 1
       renderer.compute(pingpong ? ping : pong)
     }
